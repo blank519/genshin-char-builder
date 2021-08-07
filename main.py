@@ -4,6 +4,8 @@ import update
 import character
 import weapon
 import artifact
+import config
+import re
 
 client = discord.Client()
 
@@ -54,17 +56,8 @@ async def on_message(message):
   if message.author == client.user:
     return
 
-  global char
-  global weap
-  global art
-  global chars
-  global weapons
-  global artifacts
-  global two_star_subs
-  global three_star_subs
-  global four_star_subs
-  global five_star_subs
-
+  global char, weap, art, chars, weapons, artifacts, two_star_subs, three_star_subs, four_star_subs, five_star_subs
+  
   msg = message.content
   channel = message.channel
 
@@ -90,72 +83,66 @@ async def on_message(message):
     help_msg += "**$unequip weapon/artifacts/[artifact slot]**: Unequip the selected character\'s weapon/artifacts/artifact. Gives the option to select it.\n"
     await channel.send(help_msg)
 
-  elif msg.startswith("$new "):
+  elif msg.startswith("$new"):
     #Removes the '$new' segment, and turns the message to all lowercase
-    remaining_msg = str(msg.split('$new',1)[1])
-    remaining_msg = remaining_msg.lower()
-    remaining_msg = remaining_msg.strip()
+    split_msg = str(msg.split('$new',1)[1])
+    split_msg = split_msg.lower()
+    split_msg = split_msg.strip()
 
     #Splits off the first segment (new_obj) of the remaining message
-    new_obj = remaining_msg.split(' ', 1)[0]
-    if(len(remaining_msg.split(' ', 1)) > 1):
-      remaining_msg = remaining_msg.split(' ', 1)[1].strip()
-    else:
-      remaining_msg = ''
+    split_msg = re.split(' +', split_msg)
+    new_obj = split_msg.pop(0)
 
     if new_obj == 'char':
       #Expected format: $new char [name] level [lv] c[constellations] [attack lv] [skill lv] [burst lv]. Only name is required.
 
       #Check if name exists in the string
-      if len(remaining_msg) < 1:
+      if len(split_msg) < 1:
         await channel.send("Please give the name of the character you want to create.")
       else:
         #Splits off the name portion of the string
-        if 'level' in remaining_msg:
-          name = remaining_msg.split('level',1)[0].strip()
-          remaining_msg = remaining_msg.split('level')[1].strip()
-        else:
-          name = remaining_msg
-          remaining_msg = ''
+        name = split_msg.pop(0)
+        while len(split_msg) > 0 and not(split_msg[0] == 'level' or split_msg[0].isnumeric()):
+          name += ' ' + split_msg.pop(0)
+        if split_msg[0] == 'level':
+            split_msg.pop(0)
 
-        char_names = chars['Lowercase']
         #Checks if the name is valid (in the list of names of characters implemented)
+        char_names = chars['Lowercase']
         if name not in list(char_names):
           await channel.send("Character not found. Please name a character that is currently implemented in the game.")
         else:
-          #Splits the remaining msg into [[lv], c[constellations], [attack lv], [skill lv], [burst lv]]
+          #At this point, a valid split_msg would be [level, [lv], c[constellations], [attack lv], [skill lv], [burst lv]]
           char_index = chars[char_names == name].index.tolist()[0]
-          data = remaining_msg.split(' ')
-          clear_blanks(data)
 
           #Checks the validity of unnecessary values if they exist. If invalid, displays an error message.
-          #Check that level is between 1 and 90 inclusive, or a valid ascension level
+          #Check that level, if it exists, is between 1 and 90 inclusive, or a valid ascension level
           valid_ascensions = ['20+', '40+', '50+', '60+', '70+', '80+']
-          if len(data) >= 1 and not(data[0].strip('+').isnumeric() and (data[0] in valid_ascensions or ('+' not in data[0] and 1 <= int(data[0]) <= 90))):
+          if len(split_msg) >= 1 and not(split_msg[0].strip('+').isnumeric() and (split_msg[0] in valid_ascensions or ('+' not in split_msg[0] and 1 <= int(split_msg[0]) <= 90))):
             await channel.send("Invalid character level. Please choose a number between 1 and 90, inclusive. Add a plus if the " +
                                "character is ascended but not yet leveled (ex: 20+).")
           #Check that the number of constellations is between 0 and 6, inclusive
-          elif len(data) >= 2 and not(data[1].strip('cC').isnumeric() and (0 <= int(data[1].strip('cC')) <= 6)):
+          elif len(split_msg) >= 2 and not(split_msg[1].strip('c').isnumeric() and (0 <= int(split_msg[1].strip('c')) <= 6)):
              await channel.send("Invalid constellation number. Please choose a number between 0 and 6, inclusive.")
           #Check that attack talent, skill talent, and burst talent are valid levels. Includes levels from constellations or other talents.
-          elif len(data) >= 3 and not(data[2].isnumeric() and (1 <= int(data[2]) <= 15)):
+          elif len(split_msg) >= 3 and not(split_msg[2].isnumeric() and (1 <= int(split_msg[2]) <= 15)):
              await channel.send("Invalid attack talent level. Please choose a number between 1 and 15, inclusive. Include levels from talents, constellations, or buffs.")
-          elif len(data) >= 4 and not(data[3].isnumeric() and (1 <= int(data[3]) <= 15)):
+          elif len(split_msg) >= 4 and not(split_msg[3].isnumeric() and (1 <= int(split_msg[3]) <= 15)):
              await channel.send("Invalid skill talent level. Please choose a number between 1 and 15, inclusive. Include levels from talents, constellations, or buffs.")
-          elif len(data) == 5 and not(data[4].isnumeric() and (1 <= int(data[4]) <= 15)):
+          elif len(split_msg) == 5 and not(split_msg[4].isnumeric() and (1 <= int(split_msg[4]) <= 15)):
              await channel.send("Invalid burst talent level. Please choose a number between 1 and 15, inclusive. Include levels from talents, constellations, or buffs.")
           else:
             #All values are correct, creates the character
-            if len(data) == 5:
-              char = character.Character(chars.at[char_index, 'Name'], chars.at[char_index, 'Element'], chars.at[char_index, 'Weapon'], data[0], int(data[1].strip('cC')), int(data[2]), int(data[3]), int(data[4]))
-            elif len(data) == 4:
-              char = character.Character(chars.at[char_index, 'Name'], chars.at[char_index, 'Element'], chars.at[char_index, 'Weapon'], data[0], int(data[1].strip('cC')), int(data[2]), int(data[3]))
-            elif len(data) == 3:
-              char = character.Character(chars.at[char_index, 'Name'], chars.at[char_index, 'Element'], chars.at[char_index, 'Weapon'], data[0], int(data[1].strip('cC')), int(data[2]))
-            elif len(data) == 2:
-              char = character.Character(chars.at[char_index, 'Name'], chars.at[char_index, 'Element'], chars.at[char_index, 'Weapon'], data[0], int(data[1].strip('cC')))
-            elif len(data) == 1:
-              char = character.Character(chars.at[char_index, 'Name'], chars.at[char_index, 'Element'], chars.at[char_index, 'Weapon'], data[0])
+            if len(split_msg) == 5:
+              char = character.Character(chars.at[char_index, 'Name'], chars.at[char_index, 'Element'], chars.at[char_index, 'Weapon'], split_msg[0], int(split_msg[1].strip('cC')), int(split_msg[2]), int(split_msg[3]), int(split_msg[4]))
+            elif len(split_msg) == 4:
+              char = character.Character(chars.at[char_index, 'Name'], chars.at[char_index, 'Element'], chars.at[char_index, 'Weapon'], split_msg[0], int(split_msg[1].strip('cC')), int(split_msg[2]), int(split_msg[3]))
+            elif len(split_msg) == 3:
+              char = character.Character(chars.at[char_index, 'Name'], chars.at[char_index, 'Element'], chars.at[char_index, 'Weapon'], split_msg[0], int(split_msg[1].strip('cC')), int(split_msg[2]))
+            elif len(split_msg) == 2:
+              char = character.Character(chars.at[char_index, 'Name'], chars.at[char_index, 'Element'], chars.at[char_index, 'Weapon'], split_msg[0], int(split_msg[1].strip('cC')))
+            elif len(split_msg) == 1:
+              char = character.Character(chars.at[char_index, 'Name'], chars.at[char_index, 'Element'], chars.at[char_index, 'Weapon'], split_msg[0])
             else:
               char = character.Character(chars.at[char_index, 'Name'], chars.at[char_index, 'Element'], chars.at[char_index, 'Weapon'])
 
@@ -165,44 +152,40 @@ async def on_message(message):
       #Expected format: $new weapon [name] level [lv] r[refinement]. Only name is required.
       
       #Checks if name exists in the string
-      if len(remaining_msg) < 1:
+      if len(split_msg) < 1:
         await channel.send("Please give the name of the weapon you want to create.")
       else:
         #Splits off the name portion of the string
-        if 'level' in remaining_msg:
-          name = remaining_msg.split('level',1)[0].strip()
-          remaining_msg = remaining_msg.split('level',1)[1].strip()
-        else:
-          name = remaining_msg
-          remaining_msg = ''
+        name = split_msg.pop(0)
+        while len(split_msg) > 0 and not(split_msg[0] == 'level' and split_msg[0].isnumeric()):
+          name += ' ' + split_msg.pop(0)
+        if split_msg[0] == 'level':
+          split_msg.pop(0)
 
         #Checks if the name is valid (in the list of names of weapons implemented)
         weapon_names = weapons['Lowercase']
         if name not in list(weapon_names):
             await channel.send("Weapon not found. Please name a weapon that is currently implemented in the game.")
         else:
-          #Splits the remaining msg into [[lv], r[refinement]]
-          data = remaining_msg.split(' ')
-          clear_blanks(data)
-          
+          #At this point, a valid split_msg would be [level, [lv], r[refinement]]
           #Checks the validity of unnecessary values if they exist
           level_cap = {1:70, 2:70, 3:90, 4:90, 5:90}
           weapon_index = weapons[weapon_names == name].index.tolist()[0]
           grade = weapons.at[weapon_index, 'Grade']
           valid_ascensions = ['20+', '40+', '50+', '60+', '70+', '80+']
           #Check that level is between 1 and the max level inclusive, or a valid ascension level
-          if len(data) >= 1 and not(data[0].strip('+').isnumeric() and  1 <= int(data[0].strip('+')) <= level_cap[grade] and (data[0] in valid_ascensions or '+' not in data[0])):
+          if len(split_msg) >= 1 and not(split_msg[0].strip('+').isnumeric() and  1 <= int(split_msg[0].strip('+')) <= level_cap[grade] and (split_msg[0] in valid_ascensions or '+' not in split_msg[0])):
             await channel.send("Invalid weapon level. Please choose a number between 1 and " + str(level_cap[grade]) + ", inclusive." +
                                " Add a plus if the weapon is ascended but not yet leveled (ex: 20+).")
           #Check that the number of refinements is between 1 and 5 inclusive
-          elif len(data) >= 2 and not(data[1].strip('r').isnumeric() and (1 <= int(data[1].strip('r')) <= 5)):
+          elif len(split_msg) >= 2 and not(split_msg[1].strip('r').isnumeric() and (1 <= int(split_msg[1].strip('r')) <= 5)):
              await channel.send("Invalid weapon refinement. Please choose a number between 1 and 5, inclusive.")
           else:
             #All values are correct, creates the weapon
-            if len(data) == 2:
-              weap = weapon.Weapon(weapons.at[weapon_index, 'Name'], grade, weapons.at[weapon_index, 'Type'], data[0], int(data[1].strip('r')))
-            elif len(data) == 1:
-              weap = weapon.Weapon(weapons.at[weapon_index, 'Name'], grade, weapons.at[weapon_index, 'Type'], data[0])
+            if len(split_msg) == 2:
+              weap = weapon.Weapon(weapons.at[weapon_index, 'Name'], grade, weapons.at[weapon_index, 'Type'], split_msg[0], int(split_msg[1].strip('r')))
+            elif len(split_msg) == 1:
+              weap = weapon.Weapon(weapons.at[weapon_index, 'Name'], grade, weapons.at[weapon_index, 'Type'], split_msg[0])
             else:
               weap = weapon.Weapon(weapons.at[weapon_index, 'Name'], grade, weapons.at[weapon_index, 'Type'])
             await channel.send("Created new weapon: " + str(weap))
@@ -211,18 +194,14 @@ async def on_message(message):
       #Expected format: $new artifact [set name] [artifact type] [grade]-star [main stat] +[lv] [substat:substat val]x4. Set name, 
       #artifact type, grade, and main stat are required.
 
-      #Splits remaining_msg into words
-      remaining_msg = remaining_msg.split(' ')
-      clear_blanks(remaining_msg)
-
       #Check if the set name is given in the message
-      if len(remaining_msg) == 0:
+      if len(split_msg) < 1:
         await channel.send("Please give the set name of the artifact you want to create.")
       else:
         #Separates the set name from the rest of the string (up until it finds a word that indicates an artifact slot)
-        set_name = remaining_msg.pop(0)
-        while not(len(remaining_msg) == 0 or remaining_msg[0]=='flower' or remaining_msg[0]=='feather' or remaining_msg[0]=='sands' or remaining_msg[0]=='goblet' or remaining_msg[0]=='circlet'):
-          substring = remaining_msg.pop(0)
+        set_name = split_msg.pop(0)
+        while not(len(split_msg) == 0 or split_msg[0] in art):
+          substring = split_msg.pop(0)
           set_name += ' ' + substring
 
         #Checks if the name is valid (in the list of artifact sets implemented)
@@ -230,21 +209,21 @@ async def on_message(message):
         if set_name not in list(artifact_names):
           await channel.send("Artifact set not found. Please name a set that is currently implemented in the game.")
         #Checks if the artifact slot is given in the message
-        elif len(remaining_msg) == 0:
+        elif len(split_msg) == 0:
           await channel.send("Please give the type of artifact you want to create (feather, goblet, etc).")
         else:
           set_index = artifacts[artifact_names == set_name].index.tolist()[0]
           #Checks if the artifact slot is valid (equal to 'flower', 'feather', 'sands', 'goblet', or 'circlet')
-          slot = remaining_msg.pop(0)
+          slot = split_msg.pop(0)
           if slot not in art:
             await channel.send("Artifact type not found. Please select whether the artifact is a feather, flower, sands, " +
                                 "goblet, or circlet.")
           #Checks if the grade of the artifact is given in the message
-          elif len(remaining_msg) == 0:
+          elif len(split_msg) == 0:
             await channel.send("Please give the grade of the artifact you want to create. 1-star artifacts are not supported.")
           else:
             #Checks if the grade is valid (between 2-5), and switches to the appropriate data set for checking
-            grade = remaining_msg.pop(0).replace('star','').strip('-')
+            grade = split_msg.pop(0).replace('-star','')
             if grade == '2':
               artifact_substats = two_star_subs
             elif grade == '3':
@@ -256,13 +235,13 @@ async def on_message(message):
             if not(0 <= int(grade) - artifacts.at[set_index, 'Grade'] <= 1):
               await channel.send("Invalid artifact grade. Please select an artifact grade appropriate for the selected artifact set.")
             #Checks if a main stat is given in the message
-            elif len(remaining_msg) == 0:
+            elif len(split_msg) == 0:
               await channel.send("Please give the main stat of the artifact you want to create.")
             else:
               #Checks if the given main stat is valid (in the list of valid mainstats)
-              mainstat = remaining_msg.pop(0)
-              while not(len(remaining_msg) == 0 or remaining_msg[0].strip('+').isnumeric()):
-                mainstat += ' ' + remaining_msg.pop(0)
+              mainstat = split_msg.pop(0)
+              while not(len(split_msg) == 0 or split_msg[0].strip('+').isnumeric()):
+                mainstat += ' ' + split_msg.pop(0)
               if mainstat not in valid_mainstats[slot]:
                 await channel.send("Invalid main stat. Please select a main stat appropriate for the selected artifact type.")
               else:
@@ -271,21 +250,21 @@ async def on_message(message):
                 lower_substats = [substat.lower() for substat in capital_substats]
                 valid_substats = {lower_substats[i]:capital_substats[i] for i in range(len(capital_substats))}
                 #Checks if level is given in the message, and if so, whether it is a valid number (between 0 and 20 inclusive)
-                if len(remaining_msg) >= 1 and not(remaining_msg[0].strip('+').isnumeric() and (0 <= int(remaining_msg[0]) <= 20)):
+                if len(split_msg) >= 1 and not(split_msg[0].strip('+').isnumeric() and (0 <= int(split_msg[0]) <= 20)):
                   make_artifact = False
                   await channel.send("Invalid artifact level. Please choose a number between 0 and 20, inclusive.")
                 #Checks if substats are given in the message, and if so, whether each given substat is valid
-                elif len(remaining_msg) >= 2:
-                  #Concatenates the names of multi-word substats that are separated in remaining_msg
+                elif len(split_msg) >= 2:
+                  #Concatenates the names of multi-word substats that are separated in split_msg
                   x = 1
-                  while x < len(remaining_msg):
-                    if ':' not in remaining_msg[x]: 
-                      remaining_msg[x + 1] = remaining_msg[x] + ' ' + remaining_msg[x + 1]
-                      remaining_msg.pop(x)
+                  while x < len(split_msg):
+                    if ':' not in split_msg[x]: 
+                      split_msg[x + 1] = split_msg[x] + ' ' + split_msg[x + 1]
+                      split_msg.pop(x)
                     x += 1
-                  for i in range(1, len(remaining_msg)):
+                  for i in range(1, len(split_msg)):
                     #Splits each substat into the name and value, then evaluates them
-                    sub = remaining_msg[i].split(':')
+                    sub = split_msg[i].split(':')
                     sub[1] = float(sub[1])
                     if sub[0] not in valid_substats:
                       make_artifact = False
@@ -301,19 +280,19 @@ async def on_message(message):
                         await channel.send("Invalid substat amount for " + grade + "-Star " + valid_substats[sub[0]] + " (" + str(sub[1]) + ").")
                 if make_artifact:
                   #Makes the artifact with the g
-                  if len(remaining_msg) >= 2:
+                  if len(split_msg) >= 2:
                     subs = {}
-                    for i in range(1, len(remaining_msg)):
-                      sub = remaining_msg[i].split(':')
+                    for i in range(1, len(split_msg)):
+                      sub = split_msg[i].split(':')
                       subs[valid_substats[sub[0]]] = float(sub[1])
-                    art[slot] = artifact.Artifact(artifacts.at[set_index, 'Set Name'], slot, int(grade), valid_mainstats[slot][mainstat], int(remaining_msg[0].strip('+')), subs)
-                  elif len(remaining_msg) == 1:
-                    art[slot] = artifact.Artifact(artifacts.at[set_index, 'Set Name'], slot, int(grade), valid_mainstats[mainstat], int(remaining_msg[0].strip('+')))
+                    art[slot] = artifact.Artifact(artifacts.at[set_index, 'Set Name'], slot, int(grade), valid_mainstats[slot][mainstat], int(split_msg[0].strip('+')), subs)
+                  elif len(split_msg) == 1:
+                    art[slot] = artifact.Artifact(artifacts.at[set_index, 'Set Name'], slot, int(grade), valid_mainstats[mainstat], int(split_msg[0].strip('+')))
                   else:
                     art[slot] = artifact.Artifact(artifacts.at[set_index, 'Set Name'], slot, int(grade), valid_mainstats[mainstat])
                   await channel.send("Created new " + str(art[slot]))
 
-  elif msg.startswith("$equip "):
+  elif msg.startswith("$equip"):
     #Expecting format $equip [thing to equip on char]
     if char == None:
       await channel.send("Select/create a character to equip your gear on.")
@@ -414,7 +393,7 @@ async def on_message(message):
             await channel.send(char.get_artifact(item).full_str() + "has been discarded. Current " + item + " selected: " + art[item].full_str() + ".")
             char.set_artifact(None)
 
-  elif msg.startswith("$display "):
+  elif msg.startswith("$display"):
     #Displays information to identify the currently selected character, weapon, artifact, or artifacts. Displays the information of
     #all items equipped to the selected character, too.
     displayable = msg.split("$display ", 1)[1]
@@ -489,36 +468,18 @@ async def on_message(message):
           else:
             em_bonus *= 1.5
         else:
-          if int(char.get_level().strip('+')) == 90:
+          #Calculate base damage of the transformative reaction, approximated based on level
+          char_level = int(char.get_level().strip('+'))
+          if char_level == 90:
             base_dmg = reactions.at[index,'90']
-          elif int(char.get_level().strip('+')) >= 80:
-            dmg_per_level = (reactions.at[index,'90']-reactions.at[index,'80'])/10
-            base_dmg = reactions.at[index,'80'] + dmg_per_level*(int(char.get_level().strip('+'))-80)
-          elif int(char.get_level().strip('+')) >= 70:
-            dmg_per_level = (reactions.at[index,'80']-reactions.at[index,'70'])/10
-            base_dmg = reactions.at[index,'70'] + dmg_per_level*(int(char.get_level().strip('+'))-70)
-          elif int(char.get_level().strip('+')) >= 60:
-            dmg_per_level = (reactions.at[index,'70']-reactions.at[index,'60'])/10
-            base_dmg = reactions.at[index,'60'] + dmg_per_level*(int(char.get_level().strip('+'))-60)
-          elif int(char.get_level().strip('+')) >= 50:
-            dmg_per_level = (reactions.at[index,'60']-reactions.at[index,'50'])/10
-            base_dmg = reactions.at[index,'50'] + dmg_per_level*(int(char.get_level().strip('+'))-50)
-          elif int(char.get_level().strip('+')) >= 40:
-            dmg_per_level = (reactions.at[index,'50']-reactions.at[index,'40'])/10
-            base_dmg = reactions.at[index,'40'] + dmg_per_level*(int(char.get_level().strip('+'))-40)
-          elif int(char.get_level().strip('+')) >= 30:
-            dmg_per_level = (reactions.at[index,'40']-reactions.at[index,'30'])/10
-            base_dmg = reactions.at[index,'30'] + dmg_per_level*(int(char.get_level().strip('+'))-30)
-          elif int(char.get_level().strip('+')) >= 20:
-            dmg_per_level = (reactions.at[index,'30']-reactions.at[index,'20'])/10
-            base_dmg = reactions.at[index,'20'] + dmg_per_level*(int(char.get_level().strip('+'))-20)
-          elif int(char.get_level().strip('+')) >= 10:
-            dmg_per_level = (reactions.at[index,'20']-reactions.at[index,'10'])/10
-            base_dmg = reactions.at[index,'10'] + dmg_per_level*(int(char.get_level().strip('+'))-10)
-          else:
+          elif 1 <= char_level <= 10:
             dmg_per_level = (reactions.at[index,'10']-reactions.at[index,'1'])/9
             base_dmg = reactions.at[index,'1'] + dmg_per_level*(int(char.get_level().strip('+'))-1)
-
+          else:
+            reaction_benchmark = int(char_level/10)*10
+            dmg_per_level = (reactions.at[index, str(reaction_benchmark + 10)] - reactions.at[index, str(reaction_benchmark)])/10
+            base_dmg = reactions.at[index, str(reaction_benchmark)] + dmg_per_level*(char_level - reaction_benchmark)
+          
           if reactions.at[index,'Name'] == 'Crystallize':
             em_bonus = 1+4.44*stats['Elemental Mastery']/(stats['Elemental Mastery']+1400)/100
           else:
@@ -530,4 +491,4 @@ async def on_message(message):
         ans += str(round(base_dmg*em_bonus)) + "\n"
       await channel.send(ans)
 
-client.run('ODQ0MzI3ODYzMDMzNjU5NDMy.YKQzmQ.xm2bI_8jW3kZkgR0hfL72bsGvRI')
+client.run(config.py.token)

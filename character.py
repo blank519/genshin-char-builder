@@ -90,8 +90,8 @@ class Character:
 
     def calculate_stats(self):
         """Calculates stats gained from leveling the character"""
-        DEFault_levels = ['1', '20', '20+', '40', '40+', '50', '50+', '60', '60+', '70', '70+', '80', '80+', '90']
-        if self._level in DEFault_levels:
+        default_levels = ['1', '20', '20+', '40', '40+', '50', '50+', '60', '60+', '70', '70+', '80', '80+', '90']
+        if self._level in default_levels:
             self._stats['Base HP'] = self._char_df.at[0, self._level]
             self._stats['Base ATK'] = self._char_df.at[1, self._level]
             self._stats['Base DEF'] = self._char_df.at[2, self._level]
@@ -113,20 +113,24 @@ class Character:
                                       (self._char_df.at[1, max_lv] - self._char_df.at[1, min_lv])/divider,
                                       (self._char_df.at[2, max_lv] - self._char_df.at[2, min_lv])/divider]
 
-            self._stats['Base HP'] = self._char_df.at[0, min_lv] + math.ceil((int(self._level) - math.floor(x)*10)*per_level_avg_increase[0])
-            self._stats['Base ATK'] = self._char_df.at[1, min_lv] + math.ceil((int(self._level) - math.floor(x)*10)*per_level_avg_increase[1])
-            self._stats['Base DEF'] = self._char_df.at[2, min_lv] + math.ceil((int(self._level) - math.floor(x)*10)*per_level_avg_increase[2])
+            self._stats['Base HP'] = self._char_df.at[0, min_lv] + math.ceil((int(self._level) - min_lv)*per_level_avg_increase[0])
+            self._stats['Base ATK'] = self._char_df.at[1, min_lv] + math.ceil((int(self._level) - min_lv)*per_level_avg_increase[1])
+            self._stats['Base DEF'] = self._char_df.at[2, min_lv] + math.ceil((int(self._level) - min_lv)*per_level_avg_increase[2])
 
+        #Calculating the substat
         substat = self._char_df.at[0, 'Ascension Bonus Stat'] 
+        #Modifying the substat name for exceptions
         if substat == 'HP' or substat == 'ATK' or substat == 'DEF':
             substat += '%'
         substat_increase = self._char_df.at[0, 'Ascension Bonus Stat Increase']
+        #Modifying the substat increase for exceptions
         if substat == 'Crit Rate':
             substat_increase -= 5
         elif substat == 'Crit DMG':
             substat_increase -= 50
         elif substat == 'Elemental Mastery':
             substat_increase = round(substat_increase)
+        
         if int(self._level) > 80 or self._level == '80+':
             self._stats[substat] = 4*substat_increase
         elif int(self._level) > 70 or self._level == '70+':
@@ -150,40 +154,20 @@ class Character:
         self.calculate_stats()
         for stat in self._stats:
             total_stats[stat] += self._stats[stat]
-
         if self._weapon != None:
             weapon_stats = self._weapon.calculate()
             for stat in weapon_stats:
                 total_stats[stat] += weapon_stats[stat]
-
-        if self._artifacts['flower'] != None:
-            flower_stats = self._artifacts['flower'].calculate()
-            for stat in flower_stats:
-                total_stats[stat] += flower_stats[stat]
-        if self._artifacts['feather'] != None:
-            feather_stats = self._artifacts['feather'].calculate()
-            for stat in feather_stats:
-                total_stats[stat] += feather_stats[stat]
-        if self._artifacts['sands'] != None:
-            sands_stats = self._artifacts['sands'].calculate()
-            for stat in sands_stats:
-                total_stats[stat] += sands_stats[stat]
-        if self._artifacts['goblet'] != None:
-            goblet_stats = self._artifacts['goblet'].calculate()
-            for stat in goblet_stats:
-                total_stats[stat] += goblet_stats[stat]
-        if self._artifacts['circlet'] != None:
-            circlet_stats = self._artifacts['circlet'].calculate()
-            for stat in circlet_stats:
-                total_stats[stat] += circlet_stats[stat]
+        for slot in self._artifacts:
+            if slot != None:
+                artifact_stats = self._artifacts[slot].calculate()
+                for stat in artifact_stats:
+                    total_stats[stat] += artifact_stats[stat]
         
         displayed_stats = {}
-        displayed_stats['HP'] = round(total_stats['Base HP'] * (1 + total_stats['HP%']/100) + total_stats['HP'])
-        displayed_stats['ATK'] = round(total_stats['Base ATK'] * (1 + total_stats['ATK%']/100) + total_stats['ATK'])
-        displayed_stats['DEF'] = round(total_stats['Base DEF'] * (1 + total_stats['DEF%']/100) + total_stats['DEF'])
+        for basic_stat in ['HP', 'ATK', 'DEF']:
+            displayed_stats[basic_stat] = round(total_stats['Base '+basic_stat]*(1 + total_stats[basic_stat+'%']/100) + total_stats[basic_stat])
         for stat in total_stats:
             if not('HP' in stat or 'ATK' in stat or 'DEF' in stat):
                 displayed_stats[stat] = total_stats[stat]
         return displayed_stats
-
-    

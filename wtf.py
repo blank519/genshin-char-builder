@@ -1,1 +1,2 @@
-print(5/10)
+x = 19
+print(round(x,-1))

@@ -37,20 +37,10 @@ def update():
 
                 elem_src = char.find('img', class_='char_portrait_card_sea_element')['src']
                 element = None
-                if('pyro' in elem_src):
-                    element = 'Pyro'
-                elif('hydro' in elem_src):
-                    element = 'Hydro'
-                elif('electro' in elem_src):
-                    element = 'Electro'
-                elif('cryo' in elem_src):
-                    element = 'Cryo'
-                elif('anemo' in elem_src):
-                    element = 'Anemo'
-                elif('geo' in elem_src):
-                    element = 'Geo'
-                elif('dendro' in elem_src):
-                    element = 'Dendro'
+                possible_elements = ['pyro','hydro','electro','cryo','anemo','geo','dendro']
+                for possible_element in possible_elements:
+                    if possible_element in elem_src:
+                        element = possible_element.capitalize()
             
                 weapon_src = char.find('img', class_='sea_weptype_element')['src']
                 weapon = None

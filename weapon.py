@@ -52,31 +52,25 @@ class Weapon:
     def calculate(self):
         ans = {}
         #Main Stat: Always Base Attack
-        level = int(self._level.replace('+', ''))
+        level = int(self._level.strip('+'))
         ans['Base ATK'] = math.ceil(self._weapon_data_df.at[self._weapon_index, 'Level 1 Base Attack'] + 
                         self._weapon_data_df.at[self._weapon_index, 'Base Attack Per Level']*(level-1))
-        if level > 20 or self._level == '20+':
-            ans['Base ATK'] += self._weapon_data_df.at[self._weapon_index, '20+']
-            if(int(self._level.strip('+'))) > 40 or self._level == '40+':
-                ans['Base ATK'] += self._weapon_data_df.at[self._weapon_index, '40+']
-                if(int(self._level.strip('+'))) > 50 or self._level == '50+':
-                    ans['Base ATK'] += self._weapon_data_df.at[self._weapon_index, '50+']
-                    if(int(self._level.strip('+'))) > 60 or self._level == '60+':
-                        ans['Base ATK'] += self._weapon_data_df.at[self._weapon_index, '60+']
-                        if(int(self._level.strip('+'))) > 70 or self._level == '70+':
-                            ans['Base ATK'] += self._weapon_data_df.at[self._weapon_index, '70+']
-                            if(int(self._level.strip('+'))) > 80 or self._level == '80+':
-                                ans['Base ATK'] += self._weapon_data_df.at[self._weapon_index, '80+']
+        ascensions = {20:'20+',40:'40+',50:'50+',60:'60+',70:'70+',80:'80+'}
+        for ascension_lv in ascensions:
+            if level > ascension_lv or self._level == ascensions[ascension_lv]:
+                ans['Base ATK'] += self._weapon_data_df.at[self._weapon_index, ascensions[[ascension_lv]]]
+            else:
+                break
 
         #Substat: Cannot be flat HP, ATK, or DEF
         weapon_substat = self._weapon_data_df.at[self._weapon_index, 'Substat']
+        weapon_substat_amount = self._weapon_data_df.at[self._weapon_index, 'Level 1 Substat'] + (level-1)*self._weapon_data_df.at[self._weapon_index, 'Substat Per Level']
         if weapon_substat == 'Elemental Mastery':
-            weapon_substat_amount = round(self._weapon_data_df.at[self._weapon_index, 'Level 1 Substat'] + 
-                                (level-1)*self._weapon_data_df.at[self._weapon_index, 'Substat Per Level'])
+            weapon_substat_amount = round(weapon_substat_amount)
         else:
-            weapon_substat_amount = round(self._weapon_data_df.at[self._weapon_index, 'Level 1 Substat'] + 
-                                (level-1)*self._weapon_data_df.at[self._weapon_index, 'Substat Per Level'], 1)
-        if weapon_substat == 'HP' or weapon_substat == 'ATK' or weapon_substat == 'DEF':
+            weapon_substat_amount = round(weapon_substat_amount, 1)
+        
+        if weapon_substat in ['HP','ATK','DEF']:
                 ans[weapon_substat+'%'] = weapon_substat_amount
         elif weapon_substat != 'none':
             ans[weapon_substat] = weapon_substat_amount
