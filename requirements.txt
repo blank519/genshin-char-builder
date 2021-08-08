@@ -1,0 +1,6 @@
+Required modules:
+pandas
+requests
+BeautifulSoup from bs4
+html5lib
+discord.py
