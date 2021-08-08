@@ -1,9 +1,9 @@
 import discord
 import pandas as pd
 import update
-import character
-import weapon
-import artifact
+import objects.character as character
+import objects.artifact as artifact
+import objects.weapon as weapon
 import config
 import re
 
