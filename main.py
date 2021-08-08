@@ -1,6 +1,6 @@
 import discord
 import pandas as pd
-import update
+import update_data.update_objects
 import objects.character as character
 import objects.artifact as artifact
 import objects.weapon as weapon
@@ -48,7 +48,7 @@ def clear_blanks(stringlist):
 async def on_ready():
   print("Updating...")
   #Adds any new characters, weapons, or artifacts.
-  update.update()
+  update_data.update_objects.update()
   print("We have logged in as {0.user}".format(client))
 
 @client.event

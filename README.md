@@ -28,3 +28,7 @@ Upon being run, the bot first updates all data by web scraping Honey Hunter to a
 **$unequip weapon**: Unequip the selected character\'s weapon/artifacts/artifact. Gives the option to select it.  
 **$unequip artifacts**: Unequip the selected character\'s weapon/artifacts/artifact. Gives the option to select it.  
 **$unequip (artifact slot)**: Unequip the selected character\'s weapon/artifacts/artifact. Gives the option to select it.
+
+Genshin Impact™ is a registered trademark of MiHoYo Co., Ltd.
+This program is made for educational and research purposes. Images and data ©MiHoYo Co., Ltd.
+© 2021 Honey Impact - Genshin Impact DB and Tools.
