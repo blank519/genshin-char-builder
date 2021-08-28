@@ -1,36 +1,40 @@
-Name,Lowercase,Icon,Element,Weapon
-Amber,amber,Amber.png,Pyro,Bow
-Barbara,barbara,Barbara.png,Hydro,Catalyst
-Beidou,beidou,Beidou.png,Electro,Claymore
-Bennett,bennett,Bennett.png,Pyro,Sword
-Chongyun,chongyun,Chongyun.png,Cryo,Claymore
-Diluc,diluc,Diluc.png,Pyro,Claymore
-Fischl,fischl,Fischl.png,Electro,Bow
-Jean,jean,Jean.png,Anemo,Sword
-Kaeya,kaeya,Kaeya.png,Cryo,Sword
-Keqing,keqing,Keqing.png,Electro,Sword
-Klee,klee,Klee.png,Pyro,Catalyst
-Lisa,lisa,Lisa.png,Electro,Catalyst
-Mona,mona,Mona.png,Hydro,Catalyst
-Ningguang,ningguang,Ningguang.png,Geo,Catalyst
-Noelle,noelle,Noelle.png,Geo,Claymore
-Qiqi,qiqi,Qiqi.png,Cryo,Sword
-Razor,razor,Razor.png,Electro,Claymore
-Sucrose,sucrose,Sucrose.png,Anemo,Catalyst
-Traveler,traveler,Traveler.png,Anemo,Sword
-Venti,venti,Venti.png,Anemo,Bow
-Xiangling,xiangling,Xiangling.png,Pyro,Polearm
-Xiao,xiao,Xiao.png,Anemo,Polearm
-Xingqiu,xingqiu,Xingqiu.png,Hydro,Sword
-Tartaglia,tartaglia,Tartaglia.png,Hydro,Bow
-Zhongli,zhongli,Zhongli.png,Geo,Polearm
-Diona,diona,Diona.png,Cryo,Bow
-Xinyan,xinyan,Xinyan.png,Pyro,Claymore
-Ganyu,ganyu,Ganyu.png,Cryo,Bow
-Albedo,albedo,Albedo.png,Geo,Sword
-Rosaria,rosaria,Rosaria.png,Cryo,Polearm
-Kamisato Ayaka,kamisato ayaka,Kamisato Ayaka.png,Cryo,Sword
-Hu Tao,hu tao,Hu Tao.png,Pyro,Polearm
-Yanfei,yanfei,Yanfei.png,Pyro,Catalyst
-Eula,eula,Eula.png,Cryo,Claymore
-Kaedehara Kazuha,kaedehara kazuha,Kaedehara Kazuha.png,Anemo,Sword
+Name,Lowercase,Element,Weapon
+Amber,amber,Pyro,Bow
+Barbara,barbara,Hydro,Catalyst
+Beidou,beidou,Electro,Claymore
+Bennett,bennett,Pyro,Sword
+Chongyun,chongyun,Cryo,Claymore
+Diluc,diluc,Pyro,Claymore
+Fischl,fischl,Electro,Bow
+Jean,jean,Anemo,Sword
+Kaeya,kaeya,Cryo,Sword
+Keqing,keqing,Electro,Sword
+Klee,klee,Pyro,Catalyst
+Lisa,lisa,Electro,Catalyst
+Mona,mona,Hydro,Catalyst
+Ningguang,ningguang,Geo,Catalyst
+Noelle,noelle,Geo,Claymore
+Qiqi,qiqi,Cryo,Sword
+Razor,razor,Electro,Claymore
+Sucrose,sucrose,Anemo,Catalyst
+Traveler (Anemo),traveler (anemo),Anemo,Sword
+Traveler (Geo),traveler (geo),Geo,Sword
+Venti,venti,Anemo,Bow
+Xiangling,xiangling,Pyro,Polearm
+Xiao,xiao,Anemo,Polearm
+Xingqiu,xingqiu,Hydro,Sword
+Tartaglia,tartaglia,Hydro,Bow
+Zhongli,zhongli,Geo,Polearm
+Diona,diona,Cryo,Bow
+Xinyan,xinyan,Pyro,Claymore
+Ganyu,ganyu,Cryo,Bow
+Albedo,albedo,Geo,Sword
+Rosaria,rosaria,Cryo,Polearm
+Kamisato Ayaka,kamisato ayaka,Cryo,Sword
+Hu Tao,hu tao,Pyro,Polearm
+Yanfei,yanfei,Pyro,Catalyst
+Eula,eula,Cryo,Claymore
+Kaedehara Kazuha,kaedehara kazuha,Anemo,Sword
+Yoimiya,yoimiya,Pyro,Bow
+Sayu,sayu,Anemo,Claymore
+Traveler (Electro),traveler (electro),Electro,Sword

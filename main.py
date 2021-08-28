@@ -1,54 +1,49 @@
+from io import StringIO
+from numpy import string_
+from output_transformer.transform_new_commands import NewCommandChecker
+from output_transformer.transform_display_command import DisplayCommand
 import discord
 import pandas as pd
-import update_data.update_objects
+import initial_etl.update_objects as update_objects
 import objects.character as character
 import objects.artifact as artifact
 import objects.weapon as weapon
-import config
 import re
+import config
 
 client = discord.Client()
 
 #Selected character, weapon, and artifacts. Commands will have effects on these objects only.
-char = None
-weap = None
-art = {'flower':None, 'feather':None, 'sands':None, 'goblet':None, 'circlet':None}
-
-#Data for checking validity of new objects
-chars = pd.read_csv('char_data/chars.csv')
-weapons = pd.read_csv('weapon_data/weapons.csv')
-artifacts = pd.read_csv('artifact_data/artifacts.csv')
-two_star_subs = pd.read_csv('artifact_data/two_star_sub_data.csv')
-three_star_subs = pd.read_csv('artifact_data/three_star_sub_data.csv')
-four_star_subs = pd.read_csv('artifact_data/four_star_sub_data.csv')
-five_star_subs = pd.read_csv('artifact_data/five_star_sub_data.csv')
-valid_mainstats = {'flower':['HP'],'feather':['ATK'],'sands':['HP%','ATK%','DEF%','Elemental Mastery','Energy Recharge'],
-                         'goblet':['HP%','ATK%','DEF%','Elemental Mastery','Physical Dmg Bonus','Pyro DMG Bonus','Cryo DMG Bonus',
-                         'Dendro DMG Bonus','Hydro DMG Bonus','Electro DMG Bonus','Geo DMG Bonus','Anemo DMG Bonus'],
-                         'circlet':['HP%','ATK%','DEF%','Elemental Mastery','Crit rate','Crit DMG','Healing Bonus']}
-reactions = pd.read_csv('reaction_data.csv')
-
-for slot in valid_mainstats:
-  lower_to_upper = [stat for stat in valid_mainstats[slot]]
-  valid_mainstats[slot] = {}
-  for stat in lower_to_upper:
-    lower_stat = stat.lower()
-    valid_mainstats[slot][lower_stat] = stat
-
-#Helper function to remove '' from lists of strings
-def clear_blanks(stringlist):
-  num_blanks = 0
-  for substring in stringlist:
-    if substring == '':
-      num_blanks += 1
-  for i in range(num_blanks):
-    stringlist.remove('')
+selected_character = None
+selected_weapon = None
+selected_artifacts = {'flower':None, 'feather':None, 'sands':None, 'goblet':None, 'circlet':None}
 
 @client.event
 async def on_ready():
   print("Updating...")
   #Adds any new characters, weapons, or artifacts.
-  update_data.update_objects.update()
+  char_url = "https://genshin.honeyhunterworld.com/db/char/characters/?"
+  weapon_urls = {'sword':"https://genshin.honeyhunterworld.com/sword/", 
+                 'claymore':"https://genshin.honeyhunterworld.com/claymore/",
+                 'polearm':"https://genshin.honeyhunterworld.com/polearm/",
+                 'bow':"https://genshin.honeyhunterworld.com/bow/",
+                 'catalyst':"https://genshin.honeyhunterworld.com/catalyst/"}
+  artifact_url = "https://genshin.honeyhunterworld.com/db/artifact/?"
+  updater = update_objects.Updater(char_url, weapon_urls, artifact_url)
+  updater.update()
+
+  #Initialize csv's for data
+  global characters, weapons, artifacts, artifact_main_data, two_star_substats, three_star_substats, four_star_substats, five_star_substats, reactions
+  characters = pd.read_csv('char_data/chars.csv')
+  weapons = pd.read_csv('equipment_data/weapons.csv')
+  artifacts = pd.read_csv('equipment_data/artifacts.csv')
+  artifact_main_data = pd.read_csv('equipment_data/artifact_main_data.csv')
+  two_star_substats = pd.read_csv('equipment_data/two_star_sub_data.csv')
+  three_star_substats = pd.read_csv('equipment_data/three_star_sub_data.csv')
+  four_star_substats = pd.read_csv('equipment_data/four_star_sub_data.csv')
+  five_star_substats = pd.read_csv('equipment_data/five_star_sub_data.csv')
+  reactions = pd.read_csv('equipment_data/reaction_data.csv')
+
   print("We have logged in as {0.user}".format(client))
 
 @client.event
@@ -56,7 +51,8 @@ async def on_message(message):
   if message.author == client.user:
     return
 
-  global char, weap, art, chars, weapons, artifacts, two_star_subs, three_star_subs, four_star_subs, five_star_subs
+  global selected_character, selected_weapon, selected_artifacts, characters, weapons, artifacts
+  global artifact_main_data, two_star_substats, three_star_substats, four_star_substats, five_star_substats, reactions
   
   msg = message.content
   channel = message.channel
@@ -86,350 +82,127 @@ async def on_message(message):
   elif msg.startswith("$new"):
     #Removes the '$new' segment, and turns the message to all lowercase
     split_msg = str(msg.split('$new',1)[1])
-    split_msg = split_msg.lower()
-    split_msg = split_msg.strip()
+    split_msg = split_msg.lower().strip()
 
-    #Splits off the first segment (new_obj) of the remaining message
+    #Splits off the first segment (new_obj) from the remaining message
     split_msg = re.split(' +', split_msg)
     new_obj = split_msg.pop(0)
+    message_checker = NewCommandChecker()
 
     if new_obj == 'char':
       #Expected format: $new char [name] level [lv] c[constellations] [attack lv] [skill lv] [burst lv]. Only name is required.
-
-      #Check if name exists in the string
-      if len(split_msg) < 1:
-        await channel.send("Please give the name of the character you want to create.")
+      checked_msg = message_checker.char_checker(split_msg, characters)
+      if checked_msg != None:
+        await channel.send(checked_msg)
       else:
-        #Splits off the name portion of the string
-        name = split_msg.pop(0)
-        while len(split_msg) > 0 and not(split_msg[0] == 'level' or split_msg[0].isnumeric()):
-          name += ' ' + split_msg.pop(0)
-        if split_msg[0] == 'level':
-            split_msg.pop(0)
-
-        #Checks if the name is valid (in the list of names of characters implemented)
-        char_names = chars['Lowercase']
-        if name not in list(char_names):
-          await channel.send("Character not found. Please name a character that is currently implemented in the game.")
-        else:
-          #At this point, a valid split_msg would be [level, [lv], c[constellations], [attack lv], [skill lv], [burst lv]]
-          char_index = chars[char_names == name].index.tolist()[0]
-
-          #Checks the validity of unnecessary values if they exist. If invalid, displays an error message.
-          #Check that level, if it exists, is between 1 and 90 inclusive, or a valid ascension level
-          valid_ascensions = ['20+', '40+', '50+', '60+', '70+', '80+']
-          if len(split_msg) >= 1 and not(split_msg[0].strip('+').isnumeric() and (split_msg[0] in valid_ascensions or ('+' not in split_msg[0] and 1 <= int(split_msg[0]) <= 90))):
-            await channel.send("Invalid character level. Please choose a number between 1 and 90, inclusive. Add a plus if the " +
-                               "character is ascended but not yet leveled (ex: 20+).")
-          #Check that the number of constellations is between 0 and 6, inclusive
-          elif len(split_msg) >= 2 and not(split_msg[1].strip('c').isnumeric() and (0 <= int(split_msg[1].strip('c')) <= 6)):
-             await channel.send("Invalid constellation number. Please choose a number between 0 and 6, inclusive.")
-          #Check that attack talent, skill talent, and burst talent are valid levels. Includes levels from constellations or other talents.
-          elif len(split_msg) >= 3 and not(split_msg[2].isnumeric() and (1 <= int(split_msg[2]) <= 15)):
-             await channel.send("Invalid attack talent level. Please choose a number between 1 and 15, inclusive. Include levels from talents, constellations, or buffs.")
-          elif len(split_msg) >= 4 and not(split_msg[3].isnumeric() and (1 <= int(split_msg[3]) <= 15)):
-             await channel.send("Invalid skill talent level. Please choose a number between 1 and 15, inclusive. Include levels from talents, constellations, or buffs.")
-          elif len(split_msg) == 5 and not(split_msg[4].isnumeric() and (1 <= int(split_msg[4]) <= 15)):
-             await channel.send("Invalid burst talent level. Please choose a number between 1 and 15, inclusive. Include levels from talents, constellations, or buffs.")
-          else:
-            #All values are correct, creates the character
-            if len(split_msg) == 5:
-              char = character.Character(chars.at[char_index, 'Name'], chars.at[char_index, 'Element'], chars.at[char_index, 'Weapon'], split_msg[0], int(split_msg[1].strip('cC')), int(split_msg[2]), int(split_msg[3]), int(split_msg[4]))
-            elif len(split_msg) == 4:
-              char = character.Character(chars.at[char_index, 'Name'], chars.at[char_index, 'Element'], chars.at[char_index, 'Weapon'], split_msg[0], int(split_msg[1].strip('cC')), int(split_msg[2]), int(split_msg[3]))
-            elif len(split_msg) == 3:
-              char = character.Character(chars.at[char_index, 'Name'], chars.at[char_index, 'Element'], chars.at[char_index, 'Weapon'], split_msg[0], int(split_msg[1].strip('cC')), int(split_msg[2]))
-            elif len(split_msg) == 2:
-              char = character.Character(chars.at[char_index, 'Name'], chars.at[char_index, 'Element'], chars.at[char_index, 'Weapon'], split_msg[0], int(split_msg[1].strip('cC')))
-            elif len(split_msg) == 1:
-              char = character.Character(chars.at[char_index, 'Name'], chars.at[char_index, 'Element'], chars.at[char_index, 'Weapon'], split_msg[0])
-            else:
-              char = character.Character(chars.at[char_index, 'Name'], chars.at[char_index, 'Element'], chars.at[char_index, 'Weapon'])
-
-            await channel.send("Created new character: " + str(char))
+        #If checked_msg returns None, then it is a valid command, and the character is created.
+        character_index = split_msg.pop()
+        selected_character = character.Character(characters.at[character_index,'Name'],characters.at[character_index,'Element'],characters.at[character_index,'Weapon'], split_msg)
+        await channel.send("Created new character: " + str(selected_character))
 
     elif new_obj == 'weapon':
       #Expected format: $new weapon [name] level [lv] r[refinement]. Only name is required.
-      
-      #Checks if name exists in the string
-      if len(split_msg) < 1:
-        await channel.send("Please give the name of the weapon you want to create.")
+      checked_msg = message_checker.weapon_checker(split_msg, weapons)
+      if checked_msg != None:
+        await channel.send(checked_msg)
       else:
-        #Splits off the name portion of the string
-        name = split_msg.pop(0)
-        while len(split_msg) > 0 and not(split_msg[0] == 'level' and split_msg[0].isnumeric()):
-          name += ' ' + split_msg.pop(0)
-        if split_msg[0] == 'level':
-          split_msg.pop(0)
-
-        #Checks if the name is valid (in the list of names of weapons implemented)
-        weapon_names = weapons['Lowercase']
-        if name not in list(weapon_names):
-            await channel.send("Weapon not found. Please name a weapon that is currently implemented in the game.")
-        else:
-          #At this point, a valid split_msg would be [level, [lv], r[refinement]]
-          #Checks the validity of unnecessary values if they exist
-          level_cap = {1:70, 2:70, 3:90, 4:90, 5:90}
-          weapon_index = weapons[weapon_names == name].index.tolist()[0]
-          grade = weapons.at[weapon_index, 'Grade']
-          valid_ascensions = ['20+', '40+', '50+', '60+', '70+', '80+']
-          #Check that level is between 1 and the max level inclusive, or a valid ascension level
-          if len(split_msg) >= 1 and not(split_msg[0].strip('+').isnumeric() and  1 <= int(split_msg[0].strip('+')) <= level_cap[grade] and (split_msg[0] in valid_ascensions or '+' not in split_msg[0])):
-            await channel.send("Invalid weapon level. Please choose a number between 1 and " + str(level_cap[grade]) + ", inclusive." +
-                               " Add a plus if the weapon is ascended but not yet leveled (ex: 20+).")
-          #Check that the number of refinements is between 1 and 5 inclusive
-          elif len(split_msg) >= 2 and not(split_msg[1].strip('r').isnumeric() and (1 <= int(split_msg[1].strip('r')) <= 5)):
-             await channel.send("Invalid weapon refinement. Please choose a number between 1 and 5, inclusive.")
-          else:
-            #All values are correct, creates the weapon
-            if len(split_msg) == 2:
-              weap = weapon.Weapon(weapons.at[weapon_index, 'Name'], grade, weapons.at[weapon_index, 'Type'], split_msg[0], int(split_msg[1].strip('r')))
-            elif len(split_msg) == 1:
-              weap = weapon.Weapon(weapons.at[weapon_index, 'Name'], grade, weapons.at[weapon_index, 'Type'], split_msg[0])
-            else:
-              weap = weapon.Weapon(weapons.at[weapon_index, 'Name'], grade, weapons.at[weapon_index, 'Type'])
-            await channel.send("Created new weapon: " + str(weap))
+        #If checked_msg returns None, then it is a valid command, and the weapon is created.
+        weapon_index = split_msg.pop()
+        selected_weapon = weapon.Weapon(weapons, weapon_index, split_msg)
+        await channel.send("Created new weapon: " + str(selected_weapon))
 
     elif new_obj == 'artifact':
       #Expected format: $new artifact [set name] [artifact type] [grade]-star [main stat] +[lv] [substat:substat val]x4. Set name, 
       #artifact type, grade, and main stat are required.
-
-      #Check if the set name is given in the message
-      if len(split_msg) < 1:
-        await channel.send("Please give the set name of the artifact you want to create.")
+      checked_msg = message_checker.artifact_checker(split_msg, artifacts,two_star_substats,three_star_substats,four_star_substats,five_star_substats)
+      if checked_msg != None:
+        await channel.send(checked_msg)
       else:
-        #Separates the set name from the rest of the string (up until it finds a word that indicates an artifact slot)
-        set_name = split_msg.pop(0)
-        while not(len(split_msg) == 0 or split_msg[0] in art):
-          substring = split_msg.pop(0)
-          set_name += ' ' + substring
-
-        #Checks if the name is valid (in the list of artifact sets implemented)
-        artifact_names = artifacts['Lowercase']
-        if set_name not in list(artifact_names):
-          await channel.send("Artifact set not found. Please name a set that is currently implemented in the game.")
-        #Checks if the artifact slot is given in the message
-        elif len(split_msg) == 0:
-          await channel.send("Please give the type of artifact you want to create (feather, goblet, etc).")
+        #If checked_msg returns None, then it is a valid command, and the artifact is created.
+        level = split_msg.pop()
+        main_stat = split_msg.pop()
+        grade = split_msg.pop()
+        slot = split_msg.pop()
+        artifact_index = split_msg.pop()
+        if level == None:
+          selected_artifacts[slot] = artifact.Artifact(artifacts.at[artifact_index, 'Set Name'], slot, grade, main_stat, artifact_main_data)
         else:
-          set_index = artifacts[artifact_names == set_name].index.tolist()[0]
-          #Checks if the artifact slot is valid (equal to 'flower', 'feather', 'sands', 'goblet', or 'circlet')
-          slot = split_msg.pop(0)
-          if slot not in art:
-            await channel.send("Artifact type not found. Please select whether the artifact is a feather, flower, sands, " +
-                                "goblet, or circlet.")
-          #Checks if the grade of the artifact is given in the message
-          elif len(split_msg) == 0:
-            await channel.send("Please give the grade of the artifact you want to create. 1-star artifacts are not supported.")
-          else:
-            #Checks if the grade is valid (between 2-5), and switches to the appropriate data set for checking
-            grade = split_msg.pop(0).replace('-star','')
-            if grade == '2':
-              artifact_substats = two_star_subs
-            elif grade == '3':
-              artifact_substats = three_star_subs
-            elif grade == '4':
-              artifact_substats = four_star_subs
-            elif grade == '5':
-              artifact_substats = five_star_subs
-            if not(0 <= int(grade) - artifacts.at[set_index, 'Grade'] <= 1):
-              await channel.send("Invalid artifact grade. Please select an artifact grade appropriate for the selected artifact set.")
-            #Checks if a main stat is given in the message
-            elif len(split_msg) == 0:
-              await channel.send("Please give the main stat of the artifact you want to create.")
-            else:
-              #Checks if the given main stat is valid (in the list of valid mainstats)
-              mainstat = split_msg.pop(0)
-              while not(len(split_msg) == 0 or split_msg[0].strip('+').isnumeric()):
-                mainstat += ' ' + split_msg.pop(0)
-              if mainstat not in valid_mainstats[slot]:
-                await channel.send("Invalid main stat. Please select a main stat appropriate for the selected artifact type.")
-              else:
-                make_artifact = True
-                capital_substats = ['HP','ATK','DEF','HP%','ATK%','DEF%','Elemental Mastery','Energy Recharge','Crit Rate','Crit DMG']
-                lower_substats = [substat.lower() for substat in capital_substats]
-                valid_substats = {lower_substats[i]:capital_substats[i] for i in range(len(capital_substats))}
-                #Checks if level is given in the message, and if so, whether it is a valid number (between 0 and 20 inclusive)
-                if len(split_msg) >= 1 and not(split_msg[0].strip('+').isnumeric() and (0 <= int(split_msg[0]) <= 20)):
-                  make_artifact = False
-                  await channel.send("Invalid artifact level. Please choose a number between 0 and 20, inclusive.")
-                #Checks if substats are given in the message, and if so, whether each given substat is valid
-                elif len(split_msg) >= 2:
-                  #Concatenates the names of multi-word substats that are separated in split_msg
-                  x = 1
-                  while x < len(split_msg):
-                    if ':' not in split_msg[x]: 
-                      split_msg[x + 1] = split_msg[x] + ' ' + split_msg[x + 1]
-                      split_msg.pop(x)
-                    x += 1
-                  for i in range(1, len(split_msg)):
-                    #Splits each substat into the name and value, then evaluates them
-                    sub = split_msg[i].split(':')
-                    sub[1] = float(sub[1])
-                    if sub[0] not in valid_substats:
-                      make_artifact = False
-                      await channel.send("Invalid substat type (" + sub[0] + ").")
-                    else:
-                      valid_value = False
-                      for valid_stat in artifact_substats[valid_substats[sub[0]]]:
-                        if sub[1] == valid_stat:
-                          valid_value = True
-                          break
-                      if not valid_value:
-                        make_artifact = False
-                        await channel.send("Invalid substat amount for " + grade + "-Star " + valid_substats[sub[0]] + " (" + str(sub[1]) + ").")
-                if make_artifact:
-                  #Makes the artifact with the g
-                  if len(split_msg) >= 2:
-                    subs = {}
-                    for i in range(1, len(split_msg)):
-                      sub = split_msg[i].split(':')
-                      subs[valid_substats[sub[0]]] = float(sub[1])
-                    art[slot] = artifact.Artifact(artifacts.at[set_index, 'Set Name'], slot, int(grade), valid_mainstats[slot][mainstat], int(split_msg[0].strip('+')), subs)
-                  elif len(split_msg) == 1:
-                    art[slot] = artifact.Artifact(artifacts.at[set_index, 'Set Name'], slot, int(grade), valid_mainstats[mainstat], int(split_msg[0].strip('+')))
-                  else:
-                    art[slot] = artifact.Artifact(artifacts.at[set_index, 'Set Name'], slot, int(grade), valid_mainstats[mainstat])
-                  await channel.send("Created new " + str(art[slot]))
+          substats = {}
+          for substat_pair in split_msg:
+            substat_pair = substat_pair.split(':')
+            substats[substat_pair[0]] = substat_pair[1]
+          selected_artifacts[slot] = artifact.Artifact(artifacts.at[artifact_index, 'Set Name'], slot, grade, main_stat, artifact_main_data, level, substats)
+        await channel.send("Created new " + str(selected_artifacts[slot]))
 
   elif msg.startswith("$equip"):
-    #Expecting format $equip [thing to equip on char]
-    if char == None:
+    #Expecting format $equip [thing to equip on selected_character]
+    if selected_character == None:
       await channel.send("Select/create a character to equip your gear on.")
     else:
       #Removes the '$equip' segment
       item = msg.split('$equip ',1)[1]
-      
       if item == 'weapon':
-        if weap == None:
+        if selected_weapon == None:
           await channel.send("Select/create a weapon to equip.")
         else:
-          await channel.send(str(weap) + " has been equipped to " + str(char) + ".")
-          #If a weapon was already equipped to the character, decides whether the user wants to switch the selected weapon
-          #to the unequipped weapon or keep the newly equipped weapon selected
-          if char.get_weapon() != None:
-            await channel.send("Switch selected weapon to the unequipped weapon? (y/n)")
-            confirm = await client.wait_for('message', check=check)
-            if confirm.content == 'Y' or confirm.content == 'y':
-              temp = char.get_weapon()
-              char.set_weapon(weap)
-              weap = temp
-              await channel.send("Current weapon selected: " + weap.full_str() + ".")
-            else:
-              await channel.send(char.get_weapon().full_str() + " has been discarded. Current weapon selected: " + weap.full_str() + ".")
-              char.set_weapon(weap)
-          else:
-            char.set_weapon(weap)
+          await equip_weapon(channel, check)
       elif item == 'artifacts':
-        for slot in art:
-          if art[slot] != None:
-            await channel.send("New " + slot + " has been equipped to " + str(char) + ".")
-            if char.get_artifact(slot) != None:
-              await channel.send("Switch selected " + slot + " to the unequipped " + slot + "? (y/n)")
-              confirm = await client.wait_for('message', check=check)
-              if confirm.content == 'Y' or confirm.content == 'y':
-                temp = char.get_artifact(slot)
-                char.set_artifact(slot)
-                art[slot] = temp
-                await channel.send("Current " + slot + " selected: " + art[slot].full_str() + ".")
-              else:
-                await channel.send(char.get_artifact().full_str() + " has been discarded. Current " + slot + " selected: " + art[slot].full_str() + ".")
-                char.set_artifact(art[slot])
-            char.set_artifact(art[slot])
-      elif item in art:
-        if art[item] == None:
+        for slot in selected_artifacts:
+          if selected_artifacts[slot] != None:
+            await equip_artifact(channel, item, check)
+      elif item in selected_artifacts:
+        if selected_artifacts[item] == None:
           await channel.send("Select/create a " + item + "to equip.")
         else:
-          await channel.send("New " + item + " has been equipped to " + str(char) + ".")
-          #If the artifact slot has something equipped, decides whether the user wants to switch the selected artifact to the
-          #unequipped artifact or keep the newly equipped artifact selected
-          if char.get_artifact(item) != None:
-            await channel.send("Switch selected " + item + " to the unequipped " + item + "? (y/n)")
-            confirm = await client.wait_for('message', check=check)
-            if confirm.content == 'Y' or confirm.content == 'y':
-              temp = char.get_artifact(item)
-              char.set_artifact(item)
-              art[item] = temp
-              await channel.send("Current " + item + " selected: " + art[item].full_str() + ".")
-            else:
-              await channel.send(char.get_artifact(item).full_str() + " has been discarded. Current " + item + " selected: " + art[item].full_str() + ".")
-              char.set_artifact(art[item])
-          char.set_artifact(art[item])
+          await equip_artifact(channel, item, check)
   
   elif msg.startswith("$unequip"):
-    #Expecting format $unequip [thing to unequip on char]
-    if char == None:
+    #Expecting format $unequip [thing to unequip on selected_character]
+    if selected_character == None:
       await channel.send("Select/create a character to unequip gear from.")
     else:
       item = msg.split('$unequip ',1)[1]
       if item == 'weapon':
-        if char.get_weapon() == None:
+        if selected_character.get_weapon() == None:
           await channel.send("Character does not have a weapon to unequip.")
         else:
-          #Unequips the weapon, and decides whether to switch the selected weapon to the newly unequipped weapon
-          await channel.send(str(weap) + " has been unequipped " + "from " + str(char) + ".")
-          await channel.send("Switch selected weapon to the unequipped weapon? (y/n)")
-          confirm = await client.wait_for('message', check=check)
-          if confirm.content == 'Y' or confirm.content == 'y':
-            weap = char.get_weapon()
-            char.set_weapon(None)
-            await channel.send("Current weapon selected: " + weap.full_str() + ".")
-          else:
-            await channel.send(char.get_weapon().full_str() + "has been discarded. Current weapon selected: " + weap.full_str() + ".")
-            char.set_weapon(None)
-      elif item in art.keys():
-        if art[item] == None:
+          await unequip_weapon(channel, check)
+      elif item == 'artifacts':
+        for artifact_slot in selected_artifacts:
+          if selected_artifacts[artifact_slot] != None:
+            await unequip_artifact(channel, artifact_slot, check)
+      elif item in selected_artifacts:
+        if selected_artifacts[item] == None:
           await channel.send("Character does not have a " + item + "to unequip.")
         else:
-          #Unequips the artifact, and decides whether to switch the selected artifact to the newly unequipped artifact
-          await channel.send(item + " has been unequipped from " + str(char) + ".")
-          await channel.send("Switch selected " + item + " to the unequipped " + item + "? (y/n")
-          confirm = await client.wait_for('message', check=check)
-          if confirm.content == 'Y' or confirm.content == 'y':
-            art[item] = char.get_artifact(item)
-            char.set_artifact(None)
-            await channel.send("Current " + item + " selected: " + art[item].full_str() + ".")
-          else:
-            await channel.send(char.get_artifact(item).full_str() + "has been discarded. Current " + item + " selected: " + art[item].full_str() + ".")
-            char.set_artifact(None)
+          await unequip_artifact(channel, item, check)
 
   elif msg.startswith("$display"):
     #Displays information to identify the currently selected character, weapon, artifact, or artifacts. Displays the information of
     #all items equipped to the selected character, too.
     displayable = msg.split("$display ", 1)[1]
-    if displayable == 'char' or displayable == 'character':
-      if char == None:
-        await channel.send("No character selected.")
-      else:
-        await channel.send(char.full_str())
+    transform_display = DisplayCommand()
+    if displayable == 'character':
+      await channel.send(transform_display.display(selected_character, displayable))
     elif displayable == 'weapon':
-      if weap == None:
-        await channel.send("No weapon selected.")
-      else:
-        await channel.send(weap.full_str())
+      await channel.send(transform_display.display(selected_weapon, displayable))
     elif displayable == 'artifacts':
       sent = ""
-      for slot in art:
-        if art[slot] == None :
-          sent += "No " + slot + " selected. \n"
-        else:
-          sent += art[slot].full_str() + " \n"
+      for slot in selected_artifacts:
+        sent += transform_display.display(selected_artifacts[slot], slot) + '\n'
       await channel.send(sent)
-    elif displayable in art:
-      if art[displayable] == None:
-        await channel.send("No " + displayable + " selected.")
-      else:
-        await channel.send(art[displayable].full_str())
+    elif displayable in selected_artifacts:
+      await channel.send(transform_display.display(selected_artifacts[displayable], displayable))
     else:
-      await channel.send("You can only display characters, weapons, or artifacts.")
+      await channel.send("You can only display characters, weapons, an artifact slot, or all artifacts.")
 
   elif msg.startswith("$stats"):
     #Displays all the stats of the currently selected character, with current items equipped
-    if char == None:
-      await channel.send("Select the character whose stats you want to see.")
+    if selected_character == None:
+      await channel.send("Select a character whose stats you want to see.")
     else:
       ans = ""
-      stats = char.calculate_total_stats()
+      stats = selected_character.calculate_total_stats()
       for stat in stats:
         ans += stat + ': ' + str(stats[stat]) 
         if not(stat == 'HP' or stat == 'ATK' or stat == 'DEF' or stat == 'Elemental Mastery'):
@@ -438,14 +211,15 @@ async def on_message(message):
       await channel.send(ans)
 
   elif msg.startswith("$dmg"):
-    #Gives a number representing the selected character's average damage output, with current items equipped
-    if char == None:
+    #Gives a number representing the selected character's average damage output, with current items equipped, based on their 
+    #ATK, Crit Rate/DMG, and more.
+    if selected_character == None:
       await channel.send("Select the character whose damage output you want to see.")
     else:
       #Quantifies the strength of attacks, skills, and bursts.
       ans = ""
-      stats = char.calculate_total_stats()
-      char_element = char.get_element_type()
+      stats = selected_character.calculate_total_stats()
+      char_element = selected_character.get_element_type()
       crit_atk = stats['ATK']*((1-(stats['Crit Rate']/100)) + (stats['Crit Rate']/100)*(1+(stats['Crit DMG']/100)))
       phys_dmg = round(crit_atk*(1+(stats['Physical DMG Bonus']/100)))
       elemental_dmg = round(crit_atk*(1+(stats[char_element + ' DMG Bonus']/100)))
@@ -469,12 +243,12 @@ async def on_message(message):
             em_bonus *= 1.5
         else:
           #Calculate base damage of the transformative reaction, approximated based on level
-          char_level = int(char.get_level().strip('+'))
+          char_level = int(selected_character.get_level().strip('+'))
           if char_level == 90:
             base_dmg = reactions.at[index,'90']
           elif 1 <= char_level <= 10:
             dmg_per_level = (reactions.at[index,'10']-reactions.at[index,'1'])/9
-            base_dmg = reactions.at[index,'1'] + dmg_per_level*(int(char.get_level().strip('+'))-1)
+            base_dmg = reactions.at[index,'1'] + dmg_per_level*(int(selected_character.get_level().strip('+'))-1)
           else:
             reaction_benchmark = int(char_level/10)*10
             dmg_per_level = (reactions.at[index, str(reaction_benchmark + 10)] - reactions.at[index, str(reaction_benchmark)])/10
@@ -485,10 +259,83 @@ async def on_message(message):
           else:
             em_bonus = 1+16*stats['Elemental Mastery']/(stats['Elemental Mastery']+2000)/100
         if reactions.at[index,'Name'] == 'Crystallize':
-          ans += "Crystallize Shield: "
+          ans += "Crystallize Shield Strength: "
         else:
           ans += reactions.at[index,'Name'] + " Power: "
-        ans += str(round(base_dmg*em_bonus)) + "\n"
+        ans += str(round(base_dmg)) + "\n"
       await channel.send(ans)
 
-client.run(config.py.token)
+async def equip_artifact(channel, slot, checker):
+  """ Function for equipping the selected_artifact to the selected_character """
+  global selected_artifacts
+  await channel.send("New " + slot + " has been equipped to " + str(selected_character) + ".")
+  #If the artifact slot has something equipped, decides whether the user wants to switch the selected artifact to the
+  #unequipped artifact or keep the newly equipped artifact selected
+  if selected_character.get_artifact(slot) != None:
+    await channel.send("Switch selected " + slot + " to the unequipped " + slot + "? (y/n)")
+    confirm = await client.wait_for('message', check=checker)
+    
+    if confirm.content == 'Y' or confirm.content == 'y':
+      temp = selected_character.get_artifact(slot)
+      selected_character.set_artifact(slot)
+      selected_artifacts[slot] = temp
+      await channel.send("Current " + slot + " selected: " + selected_artifacts[slot].full_str() + ".")
+    else:
+      await channel.send(selected_character.get_artifact(slot).full_str() + " has been discarded. Current " + slot + " selected: " + selected_artifacts[slot].full_str() + ".")
+      selected_character.set_artifact(selected_artifacts[slot])
+  else:
+    selected_character.set_artifact(selected_artifacts[slot])
+
+async def equip_weapon(channel, checker):
+  """ Function for equipping the selected_weapon to the selected_character """
+  global selected_weapon
+  await channel.send(str(selected_weapon) + " has been equipped to " + str(selected_character) + ".")
+  #If a weapon was already equipped to the character, decides whether the user wants to switch the selected weapon
+  #to the unequipped weapon or keep the newly equipped weapon selected
+  if selected_character.get_weapon() != None:
+    await channel.send("Switch selected weapon to the unequipped weapon? (y/n)")
+    confirm = await client.wait_for('message', check=checker)
+    if confirm.content == 'Y' or confirm.content == 'y':
+      temp = selected_character.get_weapon()
+      selected_character.set_weapon(selected_weapon)
+      selected_weapon = temp
+      await channel.send("Current weapon selected: " + selected_weapon.full_str() + ".")
+    else:
+      await channel.send(selected_character.get_weapon().full_str() + " has been discarded. Current weapon selected: " + selected_weapon.full_str() + ".")
+      selected_character.set_weapon(selected_weapon)
+  else:
+    selected_character.set_weapon(selected_weapon)
+
+async def unequip_artifact(channel, slot, checker):
+  """ Function for unequipping the artifact slot from the selected_character """
+  global selected_artifacts
+  await channel.send(slot.capitalize() + " has been unequipped from " + str(selected_character) + ".")
+  await channel.send("Switch selected " + slot + " to the unequipped " + slot + "? (y/n")
+
+  #Decides whether the user wants to switch the selected artifact to the unequipped artifact or not
+  confirm = await client.wait_for('message', check=checker)
+  if confirm.content == 'Y' or confirm.content == 'y':
+    selected_artifacts[slot] = selected_character.get_artifact(slot)
+    selected_character.set_artifact(None)
+    await channel.send("Current " + slot + " selected: " + selected_artifacts[slot].full_str() + ".")
+  else:
+    await channel.send(selected_character.get_artifact(slot).full_str() + "has been discarded. Current " + slot + " selected: " + selected_artifacts[slot].full_str() + ".")
+    selected_character.set_artifact(None)
+
+async def unequip_weapon(channel, checker):
+  """ Unequips the weapon, and decides whether to switch the selected weapon to the newly unequipped weapon """
+  global selected_weapon
+  await channel.send(str(selected_character.get_weapon()) + " has been unequipped " + "from " + str(selected_character) + ".")
+  await channel.send("Switch selected weapon to the unequipped weapon? (y/n)")
+
+  #Decides whether the user wants to switch the selected weapon to the unequipped weapon or not
+  confirm = await client.wait_for('message', check=checker)
+  if confirm.content == 'Y' or confirm.content == 'y':
+    selected_weapon = selected_character.get_weapon()
+    selected_character.set_weapon(None)
+    await channel.send("Current weapon selected: " + selected_weapon.full_str() + ".")
+  else:
+    await channel.send(selected_character.get_weapon().full_str() + "has been discarded. Current weapon selected: " + selected_weapon.full_str() + ".")
+    selected_character.set_weapon(None)
+
+client.run(config.token)
