@@ -1,0 +1,38 @@
+Set Name,Lowercase,Grade,First Effect,Second Effect
+Adventurer,adventurer,2,2 Piece: Max HP increased by 1000.,4 Piece: Opening a chest regenerates 30% Max HP over 5s.
+Traveling Doctor,traveling doctor,2,2 Piece: Increases incoming healing by 20%.,4 Piece: Using Elemental Burst restores 20% HP.
+Resolution of Sojourner,resolution of sojourner,3,2 Piece: ATK +18%.,4 Piece: Increases Charged Attack CRIT Rate by 30%.
+Brave Heart,brave heart,3,2 Piece: ATK +18%.,4 Piece: Increases DMG by 30% against opponents with more than 50% HP.
+Martial Artist,martial artist,3,2 Piece: Increases Normal Attack and Charged Attack DMG by 15%.,"4 Piece: After using Elemental Skill, increases Normal Attack and Charged Attack DMG by 25% for 8s."
+Berserker,berserker,3,2 Piece: CRIT Rate +12%,"4 Piece: When HP is below 70%, CRIT Rate increases by an additional 24%."
+Bloodstained Chivalry,bloodstained chivalry,4,2 Piece: Physical DMG +25%,"4 Piece: After defeating an opponent, increases Charged Attack DMG by 50%, and reduces its Stamina cost to 0 for 10s."
+Gladiator's Finale,gladiator's finale,4,2 Piece: ATK +18%.,"4 Piece: If the wielder of this artifact set uses a Sword, Claymore or Polearm, increases their Normal Attack DMG by 35%."
+Wanderer's Troupe,wanderer's troupe,4,2 Piece: Increases Elemental Mastery by 80.,4 Piece: Increases Charged Attack DMG by 35% if the character uses a Catalyst or a Bow.
+Pale Flame,pale flame,4,2 Piece: Physical DMG is increased by 25%.,"4 Piece: When an Elemental Skill hits an opponent, ATK is increased by 9% for 7s. This effect stacks up to 2 times and can be triggered once every 0.3s. Once 2 stacks are reached, the 2-set effect is increased by 100%."
+Gambler,gambler,3,2 Piece: Increases Elemental Skill DMG by 20%.,4 Piece: Defeating an opponent has a 100% chance to remove Elemental Skill CD. Can only occur once every 15s.
+Thundering Fury,thundering fury,4,2 Piece: Electro DMG Bonus +15%,"4 Piece: Increases damage caused by Overloaded, Electro-Charged and Superconduct by 40%. Triggering such effects decreases Elemental Skill CD by 1s. Can only occur once every 0.8s."
+Viridescent Venerer,viridescent venerer,4,2 Piece: Anemo DMG Bonus +15%,4 Piece: Increases Swirl DMG by 60%. Decreases opponent's Elemental RES to the element infused in the Swirl by 40% for 10s.
+Archaic Petra,archaic petra,4,2 Piece: Gain a 15% Geo DMG Bonus.,"4 Piece: Upon obtaining an Elemental Shard created through a Crystallize Reaction, all party members gain a 35% DMG Bonus for that particular element for 10s. Only one form of Elemental DMG Bonus can be gained in this manner at any one time."
+Crimson Witch of Flames,crimson witch of flames,4,2 Piece: Pyro DMG Bonus +15%,4 Piece: Increases Overloaded and Burning DMG by 40%. Increases Vaporize and Melt DMG by 15%. Using Elemental Skill increases the 2-Piece Set Bonus by 50% of its starting value for 10s. Max 3 stacks.
+Noblesse Oblige,noblesse oblige,4,2 Piece: Elemental Burst DMG +20%,4 Piece: Using an Elemental Burst increases all party members' ATK by 20% for 12s. This effect cannot stack.
+Blizzard Strayer,blizzard strayer,4,2 Piece: Cryo DMG Bonus +15%,"4 Piece: When a character attacks an opponent affected by Cryo, their CRIT Rate is increased by 20%. If the opponent is Frozen, CRIT Rate is increased by an additional 20%."
+Heart of Depth,heart of depth,4,2 Piece: Hydro DMG Bonus +15%,"4 Piece: After using Elemental Skill, increases Normal Attack and Charged Attack DMG by 30% for 15s."
+Glacier and Snowfield,glacier and snowfield,4,2 Piece: Cryo DMG Bonus +15%,4 Piece: Increases Superconduct DMG by 100%. Increases Melt DMG by 15%. Using an Elemental Burst increases Cryo DMG Bonus by 30% for 10s.
+Lucky Dog,lucky dog,2,2 Piece: DEF increased by 100.,4 Piece: Picking up Mora restores 300 HP.
+Defender's Will,defender's will,3,2 Piece: DEF +30%,"4 Piece: For each different element present in your own party, the wearer's Elemental RES to that corresponding element is increased by 30%."
+Retracing Bolide,retracing bolide,4,2 Piece: Increases Shield Strength by 35%.,"4 Piece: While protected by a shield, gain an additional 40% Normal and Charged Attack DMG."
+Tiny Miracle,tiny miracle,3,2 Piece: All Elemental RES increased by 20%.,4 Piece: Incoming elemental DMG increases corresponding Elemental RES by 30% for 10s. Can only occur once every 10s.
+Thundersoother,thundersoother,4,2 Piece: Electro RES increased by 40%.,4 Piece: Increases DMG against opponents affected by Electro by 35%.
+Lavawalker,lavawalker,4,2 Piece: Pyro RES increased by 40%.,4 Piece: Increases DMG against opponents affected by Pyro by 35%.
+Scholar,scholar,3,2 Piece: Energy Recharge +20%,4 Piece: Gaining Elemental Particles or Orbs gives 3 Energy to all party members who have a bow or a catalyst equipped. Can only occur once every 3s.
+Instructor,instructor,3,2 Piece: Increases Elemental Mastery by 80.,"4 Piece: Upon triggering an Elemental Reaction, increases all party members' Elemental Mastery by 120 for 8s."
+The Exile,the exile,3,2 Piece: Energy Recharge +20%,4 Piece: Using an Elemental Burst regenerates 2 Energy for all party members (excluding the wearer) every 2s for 6s. This effect cannot stack.
+Maiden Beloved,maiden beloved,4,2 Piece: Character Healing Effectiveness +15%,4 Piece: Using an Elemental Skill or Burst increases healing received by all party members by 20% for 10s.
+Tenacity of the Millelith,tenacity of the millelith,4,2 Piece: HP increased by 20%.,"4 Piece: When an Elemental Skill hits an opponent, the ATK of all nearby party members is increased by 20% and their Shield Strength is increased by 30% for 3s. This effect can be triggered once every 0.5s. This effect can still be triggered even when the character who is using this artifact set is not on the field."
+Prayers for Illumination,prayers for illumination,3,1 Piece bonus: Affected by Pyro for 40% less time.,None
+Prayers for Destiny,prayers for destiny,3,1 Piece bonus: Affected by Hydro for 40% less time.,None
+Prayers for Wisdom,prayers for wisdom,3,1 Piece bonus: Affected by Electro for 40% less time.,None
+Prayers to Springtime,prayers to springtime,3,1 Piece bonus: Affected by Cryo for 40% less time.,None
+Prayers to the Firmament,prayers to the firmament,3,1 Piece bonus: Affected by Anemo for 40% less time.,None
+Shimenawa's Reminiscence,shimenawa's reminiscence,4,2 Piece: ATK +18%.,"4 Piece: When casting an Elemental Skill, if the character has 15 or more Energy, they lose 15 Energy and Normal/Charged/ Plunging Attack DMG is increased by 50% for 10s. This effect will not trigger again during that duration."
+Emblem of Severed Fate,emblem of severed fate,4,2 Piece: Energy Recharge +20%,4 Piece: Increases Elemental Burst DMG by 25% of Energy Recharge. A maximum of 75% bonus DMG can be obtained in this way.
